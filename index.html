@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AR Rakhi</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #000; height: 100%; }
+  body { font-family: system-ui, -apple-system, sans-serif; }
+  #video { position: fixed; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; }
+  #gl { position: fixed; top: 0; left: 0; width: 100%; height: 100%; touch-action: none; }
+  body.mirrored #video, body.mirrored #gl { transform: scaleX(-1); }
+
+  /* ---------- Welcome screen ---------- */
+  #welcomeScreen {
+    position: fixed; inset: 0; z-index: 40;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 24px; box-sizing: border-box; text-align: center;
+    background: linear-gradient(180deg, rgba(20,10,10,.88), rgba(5,2,2,.94));
+    color: #fff;
+  }
+  #welcomeTitle { font-size: 26px; font-weight: 700; margin: 0; }
+  #welcomeText { font-size: 16px; line-height: 1.5; opacity: .92; max-width: 360px; margin: 0; }
+  .bigChoiceBtn {
+    width: 100%; max-width: 340px; padding: 18px 20px; border-radius: 18px; border: none;
+    font-size: 17px; font-weight: 600; color: #fff; background: rgba(255,255,255,.14);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .bigChoiceBtn.primary { background: #ff7a00; }
+  .bigChoiceBtn:disabled { opacity: .55; }
+  #welcomeChoices { display: flex; flex-direction: column; gap: 14px; width: 100%; align-items: center; margin-top: 6px; }
+
+  /* ---------- Instruction card ---------- */
+  #instructionCard {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    max-width: min(92vw, 480px); z-index: 15;
+    background: rgba(20, 10, 10, .78); color: #fff;
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 16px; padding: 12px 18px;
+    font-size: 15px; line-height: 1.4; text-align: center;
+    box-shadow: 0 4px 18px rgba(0,0,0,.35);
+    display: none;
+  }
+  #instructionCard.show { display: block; }
+
+  /* ---------- Bottom controls ---------- */
+  #controls {
+    position: fixed; bottom: 18px; left: 0; width: 100%;
+    display: none; flex-direction: column; align-items: center; gap: 10px; z-index: 20;
+    padding: 0 12px; box-sizing: border-box;
+  }
+  #controls .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  #controls button {
+    padding: 12px 18px; border-radius: 22px; border: none; min-height: 46px;
+    background: rgba(255,255,255,.18); color: #fff; font-size: 14px; font-weight: 500;
+  }
+  #controls button.active { background: #ff7a00; }
+  #controls button:disabled { opacity: .55; }
+  #captureBtn, #recordBtn {
+    padding: 14px 22px; border-radius: 24px; border: none; min-height: 48px;
+    color: #fff; font-size: 15px; font-weight: 600;
+  }
+  #captureBtn { background: #ff7a00; }
+  #recordBtn { background: #d81e2c; }
+  #recordBtn.recording { background: #7a0f16; }
+  #replayBtn { display: none; }
+
+  #flash {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #fff; opacity: 0; pointer-events: none;
+    transition: opacity 120ms ease-out; z-index: 30;
+  }
+
+  /* ---------- Celebration overlay ---------- */
+  #celebrate {
+    position: fixed; top: 30%; left: 50%; transform: translate(-50%, -50%) scale(.85);
+    z-index: 35; pointer-events: none; text-align: center;
+    opacity: 0; transition: opacity 300ms ease, transform 300ms ease;
+  }
+  #celebrate.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #celebrate .msg {
+    font-size: 30px; font-weight: 800; color: #fff;
+    text-shadow: 0 2px 14px rgba(255,120,0,.8), 0 0 2px #000;
+  }
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+    "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"
+  }
+}
+</script>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+<canvas id="gl"></canvas>
+<div id="flash"></div>
+
+<div id="celebrate"><div class="msg">🎉 Happy Rakhi! 🎉</div></div>
+
+<div id="instructionCard"><span id="instructionText"></span></div>
+
+<div id="welcomeScreen">
+  <h1 id="welcomeTitle">🪢 AR Rakhi</h1>
+  <p id="welcomeText">Welcome! This app ties a virtual Rakhi onto your wrist using your camera — like magic, no thread needed. Choose how you'd like to begin:</p>
+  <div id="welcomeChoices">
+    <button id="startBackBtn" class="bigChoiceBtn primary">📷 Show My Wrist (Back Camera)</button>
+    <button id="startSelfieBtn" class="bigChoiceBtn">🤳 Selfie Mode (Front Camera)</button>
+  </div>
+</div>
+
+<div id="controls">
+  <div class="row">
+    <button data-action="scale-">➖ Smaller</button>
+    <button data-action="scale+">➕ Bigger</button>
+  </div>
+  <div class="row">
+    <button id="captureBtn">📸 Photo</button>
+    <button id="recordBtn">🎥 Record</button>
+  </div>
+  <div class="row">
+    <button id="switchCameraBtn">🔄 Switch Camera</button>
+    <button id="replayBtn">🔊 Replay Message</button>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
