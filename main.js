@@ -10,7 +10,7 @@ const FOREARM_OFFSET_M = 0.02;            // how far up the forearm (from wrist)
 const FACE_EYE_WIDTH_M = 0.09;            // avg outer-eye-corner to outer-eye-corner distance, meters
 
 const LOCK_ANIM_DURATION_MS = 800;        // "tying on" animation length when a wrist locks on
-const TILAK_UP_OFFSET_FACTOR = 0.5;       // how far above the between-eyebrows point the tilak sits, in eye-widths
+const TILAK_UP_OFFSET_FACTOR = 0.18;      // how far above the between-eyebrows point the tilak sits, in eye-widths
 
 const JAW_OPEN_THRESHOLD = 0.5;           // jawOpen blendshape score that triggers the sweet-feed
 const JAW_CLOSE_THRESHOLD = 0.3;          // must drop back below this before it can re-trigger
@@ -128,7 +128,7 @@ function playWelcomeMessage() {
   const el = ensureWelcomeAudioEl();
   el.currentTime = 0;
   el.play().catch((err) => console.warn('Welcome audio could not play (missing file or blocked):', err));
-  replayBtn.style.display = 'flex';
+  replayBtn.style.display = 'inline-block';
 }
 
 // ---------- Three.js scene ----------
@@ -816,10 +816,21 @@ async function saveFile(blob, filename, mimeType, savedMessage) {
     try {
       await navigator.share({ files: [file], title: 'AR Rakhi' });
       setInstruction('Choose "Save" to add it to your gallery.');
+      return;
     } catch (err) {
-      if (err.name !== 'AbortError') setInstruction('Share cancelled or failed.');
+      if (err.name === 'AbortError') {
+        // User explicitly cancelled the share sheet — respect that, don't
+        // force a download behind their back.
+        setInstruction('Share cancelled.');
+        return;
+      }
+      // Any other failure (e.g. transient user-activation expired by the
+      // time this ran, which can happen for the video path since it fires
+      // from the recorder's async onstop event rather than directly from a
+      // click) — fall through to a direct download instead of losing the
+      // file silently.
+      console.warn('Web Share failed, falling back to download:', err);
     }
-    return;
   }
 
   const url = URL.createObjectURL(blob);
