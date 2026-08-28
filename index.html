@@ -19,10 +19,6 @@
     background: linear-gradient(180deg, rgba(20,10,10,.88), rgba(5,2,2,.94));
     color: #fff;
   }
-  #heroImage {
-    width: 148px; height: 148px; border-radius: 50%; object-fit: cover;
-    border: 3px solid #ff7a00; box-shadow: 0 4px 20px rgba(0,0,0,.45);
-  }
   #heroCaption { font-size: 19px; font-weight: 800; color: #ffd54a; margin: 0; }
   #welcomeTitle { font-size: 24px; font-weight: 700; margin: 0; }
   #welcomeText { font-size: 16px; line-height: 1.5; opacity: .92; max-width: 360px; margin: 0; }
@@ -70,7 +66,6 @@
     background: rgba(255,255,255,.18); color: #fff; font-size: 12.5px; font-weight: 500;
   }
   #controls .row button:disabled { opacity: .55; }
-  #replayBtn { display: none; }
 
   #captureBtn, #recordBtn {
     padding: 13px 34px; border-radius: 24px; border: none; min-height: 48px; min-width: 132px;
@@ -114,6 +109,17 @@
     background: linear-gradient(90deg, rgba(216,30,44,.88), rgba(242,150,30,.88));
     box-shadow: 0 4px 16px rgba(0,0,0,.4);
   }
+
+  /* ---------- Watermark ---------- */
+  /* Always on top (above the welcome screen's own overlay) and click-through,
+     sitting in the small gap below the control buttons so it never overlaps
+     them. Present for the lifetime of the app, not tied to any screen state. */
+  #watermark {
+    position: fixed; bottom: 2px; left: 0; width: 100%;
+    text-align: center; font-size: 10px; letter-spacing: .02em;
+    color: rgba(255,255,255,.4);
+    pointer-events: none; z-index: 50;
+  }
 </style>
 
 <script type="importmap">
@@ -136,8 +142,7 @@
 <div id="instructionCard"><span id="instructionText"></span></div>
 
 <div id="welcomeScreen">
-  <img id="heroImage" src="images/hero.jpeg" alt="">
-  <p id="heroCaption">🎉 Happy Rakhi from Sridevi! 🎉</p>
+  <p id="heroCaption">🎉 Happy Rakshabandhan 🎉</p>
   <h1 id="welcomeTitle">🪢 AR Rakhi</h1>
   <p id="welcomeText">Welcome! This app ties a virtual Rakhi onto your wrist using your camera — like magic, no thread needed. Choose how you'd like to begin:</p>
   <div id="welcomeChoices">
@@ -149,13 +154,14 @@
 <div id="controls">
   <div class="row">
     <button id="switchCameraBtn">🔄 Switch Camera</button>
-    <button id="replayBtn">🔊 Replay Message</button>
   </div>
   <div class="row primaryRow">
     <button id="captureBtn">📸 Photo</button>
     <button id="recordBtn">🎥 Record</button>
   </div>
 </div>
+
+<div id="watermark">Made by Nagarjuna Vatti</div>
 
 <script type="module" src="main.js"></script>
 </body>

@@ -19,11 +19,6 @@ const SWEET_COOLDOWN_MS = 500;
 
 const MAX_RECORD_MS = 15000;              // safety cap so recordings can't grow unbounded on-device
 
-// Path to a pre-recorded welcome/instruction voice message, played once the
-// first time a rakhi appears. Drop the file at this path (or change the path
-// below) to wire it up.
-const WELCOME_AUDIO_SRC = 'audio/welcome-message.aac';
-
 // ---------- DOM ----------
 const video = document.getElementById('video');
 const glCanvas = document.getElementById('gl');
@@ -42,7 +37,6 @@ const controls = document.getElementById('controls');
 const captureBtn = document.getElementById('captureBtn');
 const recordBtn = document.getElementById('recordBtn');
 const switchCameraBtn = document.getElementById('switchCameraBtn');
-const replayBtn = document.getElementById('replayBtn');
 
 let handLandmarker = null;
 let faceLandmarker = null;
@@ -53,7 +47,6 @@ let lastFrameTime = performance.now();
 const rakhiScale = 1.3; // fixed size (no user-adjustable Smaller/Bigger controls)
 let selfieMode = false;
 let currentStream = null;
-let welcomeMessagePlayedOnce = false;
 
 // Shows plain-language guidance in the top card instead of raw tracking status.
 function setInstruction(text) {
@@ -106,29 +99,6 @@ function playCheer() {
   tone(1046.5, 0.26, 0.55, 0.14, 'triangle');
   tone(1568.0, 0.3, 0.4, 0.06, 'sine');
   tone(2093.0, 0.42, 0.35, 0.05, 'sine');
-}
-
-// ---------- Welcome voice message ----------
-let welcomeAudioEl = null;
-function ensureWelcomeAudioEl() {
-  if (!welcomeAudioEl) {
-    welcomeAudioEl = new Audio(WELCOME_AUDIO_SRC);
-    welcomeAudioEl.preload = 'auto';
-  }
-  return welcomeAudioEl;
-}
-// Unlocks the <audio> element for later programmatic playback. Must be called
-// synchronously from within a real user-gesture handler (e.g. a button click).
-function unlockWelcomeAudio() {
-  const el = ensureWelcomeAudioEl();
-  el.muted = true;
-  el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; }).catch(() => { el.muted = false; });
-}
-function playWelcomeMessage() {
-  const el = ensureWelcomeAudioEl();
-  el.currentTime = 0;
-  el.play().catch((err) => console.warn('Welcome audio could not play (missing file or blocked):', err));
-  replayBtn.style.display = 'inline-block';
 }
 
 // ---------- Three.js scene ----------
@@ -639,10 +609,6 @@ function updateHand(anchor, lm) {
   if (!ud.wasVisible) {
     ud.lockTime = performance.now();
     playChime();
-    if (!welcomeMessagePlayedOnce) {
-      welcomeMessagePlayedOnce = true;
-      playWelcomeMessage();
-    }
   }
   ud.wasVisible = true;
 
@@ -731,7 +697,6 @@ async function boot(facingMode) {
     if (selfieMode) await initFaceModel(vision);
     welcomeScreen.style.display = 'none';
     controls.style.display = 'flex';
-    unlockWelcomeAudio();
     ensureAudio();
     running = true;
     lastFrameTime = performance.now();
@@ -766,8 +731,6 @@ switchCameraBtn.addEventListener('click', async () => {
   }
   switchCameraBtn.disabled = false;
 });
-
-replayBtn.addEventListener('click', () => playWelcomeMessage());
 
 // ---------- Shared compositing (photo capture + video recording) ----------
 // Draws the camera feed (replicating its on-screen object-fit:cover crop,
