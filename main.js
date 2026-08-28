@@ -128,7 +128,7 @@ function playWelcomeMessage() {
   const el = ensureWelcomeAudioEl();
   el.currentTime = 0;
   el.play().catch((err) => console.warn('Welcome audio could not play (missing file or blocked):', err));
-  replayBtn.style.display = 'inline-flex';
+  replayBtn.style.display = 'flex';
 }
 
 // ---------- Three.js scene ----------
@@ -316,16 +316,18 @@ function easeOutBack(t) {
 // ---------- Sparkle particle burst (celebration) ----------
 const sparkleParticles = [];
 function spawnSparkles(origin) {
-  const count = 14;
+  // Small and quick to disperse outward, so it reads as a glint of sparkle
+  // rather than a cluster of bubbles lingering over the subject's face.
+  const count = 16;
   for (let i = 0; i < count; i++) {
-    const geo = new THREE.SphereGeometry(0.018 + Math.random() * 0.014, 6, 6);
+    const geo = new THREE.SphereGeometry(0.006 + Math.random() * 0.006, 6, 6);
     const mat = new THREE.MeshBasicMaterial({ color: Math.random() > 0.5 ? 0xffd54a : 0xffffff, transparent: true });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(origin);
-    const dir = new THREE.Vector3((Math.random() - 0.5), Math.random() * 0.7 + 0.2, (Math.random() - 0.5) * 0.6).normalize();
-    const speed = 0.25 + Math.random() * 0.35;
+    const dir = new THREE.Vector3((Math.random() - 0.5) * 2, Math.random() * 0.8 + 0.3, (Math.random() - 0.5)).normalize();
+    const speed = 0.55 + Math.random() * 0.5;
     scene.add(mesh);
-    sparkleParticles.push({ mesh, vel: dir.multiplyScalar(speed), born: performance.now(), life: 800 + Math.random() * 400 });
+    sparkleParticles.push({ mesh, vel: dir.multiplyScalar(speed), born: performance.now(), life: 450 + Math.random() * 250 });
   }
 }
 function updateSparkles(dtSeconds) {
