@@ -22,7 +22,7 @@ const MAX_RECORD_MS = 15000;              // safety cap so recordings can't grow
 // Path to a pre-recorded welcome/instruction voice message, played once the
 // first time a rakhi appears. Drop the file at this path (or change the path
 // below) to wire it up.
-const WELCOME_AUDIO_SRC = 'audio/welcome-message.mp3';
+const WELCOME_AUDIO_SRC = 'audio/welcome-message.aac';
 
 // ---------- DOM ----------
 const video = document.getElementById('video');
@@ -50,7 +50,7 @@ let faceModelLoading = false;
 let running = false;
 let lastVideoTime = -1;
 let lastFrameTime = performance.now();
-let rakhiScale = 1.3; // default = old baseline size + 2 taps of "Bigger" (2 * 0.15)
+const rakhiScale = 1.3; // fixed size (no user-adjustable Smaller/Bigger controls)
 let selfieMode = false;
 let currentStream = null;
 let welcomeMessagePlayedOnce = false;
@@ -620,6 +620,14 @@ function updateHand(anchor, lm) {
   palmNormal.sub(forearmDir.clone().multiplyScalar(palmNormal.dot(forearmDir))).normalize();
   if (palmNormal.lengthSq() < 1e-6) palmNormal.set(1, 0, 0); // degenerate fallback
 
+  // index->pinky sweeps in opposite directions for a left vs. right hand, so
+  // the cross product above flips sign between hands — without this, the
+  // medallion would face the camera for one hand and show its back (the
+  // band) for the other. Force it to always point toward the camera
+  // (camera sits at the world origin) instead of trusting hand chirality.
+  const towardCamera = wristW.clone().negate().normalize();
+  if (palmNormal.dot(towardCamera) < 0) palmNormal.negate();
+
   const axisX = new THREE.Vector3().crossVectors(forearmDir, palmNormal).normalize();
   const basis = new THREE.Matrix4().makeBasis(axisX, forearmDir, palmNormal);
   anchor.quaternion.setFromRotationMatrix(basis);
@@ -742,14 +750,6 @@ startSelfieBtn.addEventListener('click', () => {
   selfieMode = true;
   document.body.classList.add('mirrored');
   boot('user');
-});
-
-controls.addEventListener('click', (e) => {
-  const btn = e.target.closest('button');
-  if (!btn) return;
-  const action = btn.dataset.action;
-  if (action === 'scale-') rakhiScale = Math.max(0.4, rakhiScale - 0.15);
-  if (action === 'scale+') rakhiScale = Math.min(2.5, rakhiScale + 0.15);
 });
 
 switchCameraBtn.addEventListener('click', async () => {
