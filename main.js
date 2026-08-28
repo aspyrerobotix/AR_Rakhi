@@ -689,6 +689,28 @@ function renderLoop() {
   if (isRecording) compositeInto(recordCtx, recordCanvas.width, recordCanvas.height);
 }
 
+// Turns raw getUserMedia/model-loading errors into plain-language guidance.
+// The most common real-world case is a camera already claimed by another
+// browser tab or app — the raw error for that ("Could not start video
+// source" / NotReadableError) is meaningless to most people, so call it out
+// specifically instead of showing a generic "something went wrong".
+function friendlyCameraError(err) {
+  const name = err && err.name;
+  if (name === 'NotReadableError' || name === 'TrackStartError') {
+    return "Couldn't access the camera — it's probably already in use. Please close any other browser tabs, apps, or video calls using the camera, then try again.";
+  }
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+    return 'Camera permission was denied. Please allow camera access for this site in your browser settings, then try again.';
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+    return "No camera was found on this device.";
+  }
+  if (name === 'OverconstrainedError') {
+    return "Your camera doesn't support the required settings. Please try the other camera option.";
+  }
+  return 'Something went wrong: ' + (err && err.message ? err.message : err) + ' — please try again.';
+}
+
 async function boot(facingMode) {
   startBackBtn.disabled = true;
   startSelfieBtn.disabled = true;
@@ -703,7 +725,7 @@ async function boot(facingMode) {
     setInstruction(selfieMode ? 'Bring your face into view, nice and centered 🙂' : 'Hold your wrist up to the camera, like checking a watch ⌚');
     renderLoop();
   } catch (e) {
-    welcomeText.textContent = 'Something went wrong: ' + e.message + ' — please try again.';
+    welcomeText.textContent = friendlyCameraError(e);
     startBackBtn.disabled = false;
     startSelfieBtn.disabled = false;
     console.error(e);
@@ -727,7 +749,8 @@ switchCameraBtn.addEventListener('click', async () => {
     if (selfieMode) await initFaceModel();
     setInstruction(selfieMode ? 'Bring your face into view, nice and centered 🙂' : 'Hold your wrist up to the camera, like checking a watch ⌚');
   } catch (e) {
-    setInstruction('Camera switch failed: ' + e.message);
+    setInstruction(friendlyCameraError(e));
+    console.error(e);
   }
   switchCameraBtn.disabled = false;
 });
